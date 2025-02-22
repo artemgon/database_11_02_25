@@ -1,164 +1,219 @@
-CREATE DATABASE Hospital;
-GO
+create database Academy;
+go
 
-USE Hospital;
-GO
+use Academy;
+go
 
-CREATE TABLE Departments (
-    DepartmentID INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-    DepartmentBuilding INT NOT NULL CHECK(DepartmentBuilding > 0 AND DepartmentBuilding < 6),
-    DepartmentName NVARCHAR(100) NOT NULL CHECK(LEN(TRIM(DepartmentName)) > 0) UNIQUE
+create table Faculties
+(
+    FacultyID int identity(1,1) not null primary key,
+    FacultyName nvarchar(100) not null check (LEN(TRIM(FacultyName)) > 0) unique
 );
-GO
+go
 
-CREATE TABLE Doctor (
-    DoctorID INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-    DoctorName NVARCHAR(MAX) NOT NULL CHECK (LEN(TRIM(DoctorName)) > 0),
-    DoctorPremium MONEY NOT NULL CHECK (DoctorPremium > 0) DEFAULT 0,
-    DoctorSalary MONEY NOT NULL CHECK (DoctorSalary > 0),
-    DoctorSurname NVARCHAR(MAX) NOT NULL CHECK (LEN(TRIM(DoctorSurname)) > 0)
+create table Departments
+(
+    DepartmentID int identity(1,1) not null primary key,
+    DepartmentFinancing money not null check(DepartmentFinancing >= 0) default 0,
+    DepartmentName nvarchar(100) not null check (LEN(TRIM(DepartmentName)) > 0) unique,
+    FacultyID int not null foreign key references Faculties(FacultyID)
 );
-GO
+go
 
-CREATE TABLE Examinations (
-    ExaminationID INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-    ExaminationName NVARCHAR(100) NOT NULL CHECK (LEN(TRIM(ExaminationName)) > 0) UNIQUE
+create table Teachers
+(
+    TeacherID int identity(1,1) not null primary key,
+    TeacherName nvarchar(max) not null check (LEN(TRIM(TeacherName)) > 0),
+    TeacherSalary money not null check(TeacherSalary > 0),
+    TeacherSurname nvarchar(max) not null check (LEN(TRIM(TeacherSurname)) > 0),
+    DepartmentID int not null foreign key references Departments(DepartmentID)
 );
-GO
+go
 
-CREATE TABLE Wards (
-    WardID INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-    WardName NVARCHAR(20) NOT NULL CHECK (LEN(TRIM(WardName)) > 0) UNIQUE,
-    WardPlaces INT NOT NULL CHECK (WardPlaces >= 1),
-    DepartmentID INT NOT NULL FOREIGN KEY REFERENCES Departments(DepartmentID)
+create table Subjects
+(
+    SubjectID int identity(1,1) not null primary key,
+    SubjectName nvarchar(100) not null check (LEN(TRIM(SubjectName)) > 0) unique
 );
-GO
+go
 
-CREATE TABLE DoctorExaminations (
-    DoctorExaminationID INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
-    DoctorExaminationEndTime TIME NOT NULL,
-    DoctorExaminationStartTime TIME NOT NULL CHECK (DoctorExaminationStartTime > '08:00:00' AND DoctorExaminationStartTime < '18:00:00'),
-    DoctorID INT NOT NULL FOREIGN KEY REFERENCES Doctor(DoctorID),
-    ExaminationID INT NOT NULL FOREIGN KEY REFERENCES Examinations(ExaminationID),
-    WardID INT NOT NULL FOREIGN KEY REFERENCES Wards(WardID)
+create table Lectures
+(
+    LectureID int identity(1,1) not null primary key,
+    LectureDayOfWeek int not null check(LectureDayOfWeek >= 1 and LectureDayOfWeek <= 7),
+    LectureRoom nvarchar(max) not null check(LEN(TRIM(LectureRoom)) > 0),
+    SubjectID int not null foreign key references Subjects(SubjectID),
+    TeacherID int not null foreign key references Teachers(TeacherID)
 );
-GO
+go
 
-CREATE TRIGGER ValidateExaminationTime
-ON DoctorExaminations
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM inserted
-        WHERE DoctorExaminationEndTime <= DoctorExaminationStartTime
-    )
-    BEGIN
-        RAISERROR('DoctorExaminationEndTime must be greater than DoctorExaminationStartTime.', 16, 1);
-        ROLLBACK TRANSACTION;
-    END
-END;
-GO
+create table Students
+(
+    StudentID int identity(1,1) not null primary key,
+    StudentName nvarchar(max) not null check (LEN(TRIM(StudentName)) > 0),
+    StudentSurname nvarchar(max) not null check (LEN(TRIM(StudentSurname)) > 0),
+    StudentYear int not null check(StudentYear >= 1 and StudentYear <= 5)
+);
+go
 
-INSERT INTO Departments (DepartmentBuilding, DepartmentName)
+create table Groups
+(
+    GroupID int identity(1,1) not null primary key,
+    GroupName nvarchar(10) not null check (LEN(TRIM(GroupName)) > 0) unique,
+    GroupYear int not null check(GroupYear >= 1 and GroupYear <= 5),
+    DepartmentID int not null foreign key references Departments(DepartmentID),
+    StudentID int not null foreign key references Students(StudentID)
+);
+go
+
+create table GroupsLectures
+(
+    GroupLectureID int identity(1,1) not null primary key,
+    GroupID int not null foreign key references Groups(GroupID),
+    LectureID int not null foreign key references Lectures(LectureID)
+);
+go
+
+INSERT INTO Faculties (FacultyName)
 VALUES
-(1, 'Cardiology'),
-(2, 'Neurology'),
-(3, 'Oncology'),
-(4, 'Pediatrics'),
-(5, 'Surgery'),
-(6, 'Neurology'),
-(7, 'Oncology'),
-(8, 'Pediatrics');
+    ('Computer Science'),
+    ('Engineering'),
+    ('Mathematics');
 
-
-INSERT INTO Doctor (DoctorName, DoctorPremium, DoctorSalary, DoctorSurname)
+INSERT INTO Departments (DepartmentFinancing, DepartmentName, FacultyID)
 VALUES
-('John', 1000, 5000, 'Doe'),
-('Jane', 2000, 6000, 'Doe'),
-('Jack', 3000, 7000, 'Doe'),
-('Jill', 4000, 8000, 'Doe'),
-('Jim', 5000, 9000, 'Doe');
+    (50000, 'Software Development', 1),
+    (45000, 'Data Science', 1),
+    (40000, 'Mechanical Engineering', 2),
+    (30000, 'Pure Mathematics', 3);
 
-INSERT INTO Examinations (ExaminationName)
+INSERT INTO Teachers (TeacherName, TeacherSalary, TeacherSurname, DepartmentID)
 VALUES
-('Blood Test'),
-('MRI'),
-('X-Ray'),
-('Ultrasound'),
-('CT');
+    ('Dave', 3000, 'McQueen', 1),
+    ('Jack', 3500, 'Underhill', 2),
+    ('Alice', 3200, 'Smith', 3),
+    ('Bob', 3100, 'Johnson', 4);
 
-INSERT INTO Wards (WardName, WardPlaces, DepartmentID)
+INSERT INTO Subjects (SubjectName)
 VALUES
-('Ward1', 10, 1),
-('Ward2', 20, 2),
-('Ward3', 30, 3),
-('Ward4', 40, 4),
-('Ward5', 50, 5);
+    ('Database Systems'),
+    ('Algorithms'),
+    ('Mechanics'),
+    ('Linear Algebra');
 
-INSERT INTO DoctorExaminations (DoctorExaminationEndTime, DoctorExaminationStartTime, DoctorID, ExaminationID, WardID)
+INSERT INTO Students (StudentName, StudentSurname, StudentYear)
 VALUES
-('09:00:00', '08:30:00', 1, 1, 1),  -- Valid: Start time is 08:30:00
-('10:00:00', '09:00:00', 2, 2, 2),  -- Valid: Start time is 09:00:00
-('11:00:00', '10:00:00', 3, 3, 3),  -- Valid: Start time is 10:00:00
-('12:00:00', '11:00:00', 4, 4, 4),  -- Valid: Start time is 11:00:00
-('13:00:00', '12:00:00', 5, 5, 5);  -- Valid: Start time is 12:00:00
+    ('John', 'Doe', 2),
+    ('Jane', 'Smith', 3),
+    ('Mike', 'Johnson', 1),
+    ('Emily', 'Brown', 4);
 
--- 1-st query --
-SELECT COUNT(WardName) AS SpaciousWards
-FROM Wards
-WHERE WardPlaces > 10;
+INSERT INTO Groups (GroupName, GroupYear, DepartmentID, StudentID)
+VALUES
+    ('CS101', 2, 1, 1),
+    ('DS201', 3, 2, 2),
+    ('ME301', 1, 3, 3),
+    ('MA401', 4, 4, 4);
 
--- 2-nd query --
-SELECT DepartmentBuilding, WardPlaces
-FROM Wards
-INNER JOIN Departments
-ON Wards.DepartmentID = Departments.DepartmentID
-WHERE WardPlaces > 10;
+INSERT INTO Lectures (LectureDayOfWeek, LectureRoom, SubjectID, TeacherID)
+VALUES
+    (1, 'D201', 1, 1),
+    (2, 'D202', 2, 2),
+    (3, 'D203', 3, 3),
+    (4, 'D204', 4, 4);
 
--- 3-rd query --
-SELECT DepartmentName, WardPlaces
-FROM Wards
-INNER JOIN Departments
-ON Wards.DepartmentID = Departments.DepartmentID
-WHERE WardPlaces > 10;
+INSERT INTO GroupsLectures (GroupID, LectureID)
+VALUES
+    (1, 1),
+    (2, 2),
+    (3, 3),
+    (4, 4);
 
--- 4-th query --
-SELECT DepartmentName, SUM(DoctorPremium) AS TotalPremium
-FROM Doctor
-INNER JOIN Departments
-ON Doctor.DoctorID = Departments.DepartmentID
-GROUP BY DepartmentName;
+-- 1-st query--
+select count(t.TeacherID) as TeachersCount
+from Teachers t
+inner join Departments d on t.DepartmentID = d.DepartmentID
+where d.DepartmentName = 'Software Development';
 
--- 5-th --
-SELECT d.DepartmentName
-FROM Departments d
-INNER JOIN Wards w ON d.DepartmentID = w.DepartmentID
-INNER JOIN DoctorExaminations de ON w.WardID = de.WardID
-GROUP BY d.DepartmentName
-HAVING COUNT(DISTINCT de.DoctorID) >= 5;
+-- 2-nd query--
+select count(l.LectureID) as LecturesCount
+from Lectures l
+inner join Teachers T on l.TeacherID = T.TeacherID
+where t.TeacherName = 'Dave' and t.TeacherSurname = 'McQueen';
 
--- 6-th query --
-SELECT COUNT(DoctorName) AS DoctorsCount, SUM(DoctorSalary) + SUM(DoctorPremium) AS TotalCost
-FROM Doctor;
+-- 3-rd query--
+select count(s.SubjectID) as SubjectsCount
+from Subjects s
+inner join Lectures l on s.SubjectID = l.SubjectID
+where l.LectureRoom = 'D201';
 
--- 7-th query --
-SELECT AVG(DoctorSalary + DoctorPremium) AS AverageCost
-FROM Doctor;
+-- 4-th query--
+select LectureRoom, count(LectureID) as LecturesCount
+from Lectures
+group by LectureRoom;
 
--- 8-th query --
-SELECT WardName, MIN(WardPlaces) AS MinPlaces
-FROM Wards
-GROUP BY WardName;
+-- 5-th query--
+select count(distinct s.StudentID) as StudentsCount
+from Lectures l
+inner join Teachers t on l.TeacherID = t.TeacherID
+inner join GroupsLectures gl on l.LectureID = gl.LectureID
+inner join Groups g on gl.GroupID = g.GroupID
+inner join Students s on g.GroupID = s.GroupID
+where t.TeacherName = 'Jack' and t.TeacherSurname = 'Underhill';
 
--- 9-th query --
-SELECT DepartmentBuilding, SUM(WardPlaces) AS TotalPlaces
-FROM Departments
-INNER JOIN Wards W ON Departments.DepartmentID = W.DepartmentID
-WHERE (DepartmentBuilding = 1 OR DepartmentBuilding = 6 OR DepartmentBuilding = 7 OR DepartmentBuilding = 8)
-  AND WardPlaces > 10
-GROUP BY DepartmentBuilding
-HAVING SUM(WardPlaces) > 100;
+-- 6-th query--
+select avg(TeacherSalary) as AverageSalary
+from Teachers
+inner join Departments D on Teachers.DepartmentID = D.DepartmentID
+inner join Faculties F on D.FacultyID = F.FacultyID
+where F.FacultyName = 'Computer Science';
 
-DROP DATABASE Hospital;
+-- 7-th query--
+select min(StudentCount) as MinStudents, max(StudentCount) as MaxStudents
+from
+(
+    select count(s.StudentID) as StudentCount
+    from Students s
+    group by s.GroupID
+)
+as GroupStudentCounts;
+
+-- 8-th query--
+select avg(DepartmentFinancing) as AverageFinancing
+from Departments;
+
+-- 9-th query--
+select t.TeacherName + ' ' + t.TeacherSurname as FullName, count(distinct l.SubjectID) as SubjectsCount
+from Teachers t
+inner join Lectures l on t.TeacherID = l.TeacherID
+group by t.TeacherName, t.TeacherSurname;
+
+-- 10-th query--
+select LectureDayOfWeek, count(LectureID) as LecturesCount
+from Lectures
+group by LectureDayOfWeek
+order by LectureDayOfWeek;
+
+-- 11-th query--
+select l.LectureRoom, count(distinct d.DepartmentID) as DepartmentsCount
+from Lectures l
+inner join Teachers t on l.TeacherID = t.TeacherID
+inner join Departments d on t.DepartmentID = d.DepartmentID
+group by l.LectureRoom;
+
+-- 12-th query--
+select f.FacultyName, count(distinct s.SubjectID) as SubjectsCount
+from Faculties f
+inner join Departments d on f.FacultyID = d.FacultyID
+inner join Teachers t on d.DepartmentID = t.DepartmentID
+inner join Lectures l on t.TeacherID = l.TeacherID
+inner join Subjects s on l.SubjectID = s.SubjectID
+group by f.FacultyName;
+
+-- 13-th query--
+select t.TeacherName + ' ' + t.TeacherSurname as TeacherFullName, l.LectureRoom, count(l.LectureID) as LecturesCount
+from Lectures l
+inner join Teachers t on l.TeacherID = t.TeacherID
+group by t.TeacherName, t.TeacherSurname, l.LectureRoom;
+
+drop database Academy;
